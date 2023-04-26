@@ -1,0 +1,109 @@
+//********************* solution 1
+
+$mail->isSMTP();                                      // Set mailer to use SMTP
+        $mail->Host = 'smtp.office365.com';             // Specify main and backup SMTP servers
+        $mail->SMTPAuth = true;                     // Enable SMTP authentication
+        $mail->Username = 'sso.mailbox@hibernianhealth.com';          // SMTP username
+        $mail->Password = '5KH*BXYslk6R'; // SMTP password
+        $mail->SMTPSecure = 'tls';                              // Enable TLS encryption, `ssl` also accepted
+        $mail->Port = 587;                                    // TCP port to connect to
+
+        $mail->FromName = 'Mailer';
+        $mail->addAddress($send_mail_to, $send_mail_to);     
+        $mail->addReplyTo($send_mail_from, $send_mail_from);
+        $mail->addCustomHeader( 'In-Reply-To', '<'.$mail_mail_id.'>');                    //'<' . $send_mail_from . '>'
+        $mail->addCustomHeader( 'X-GM-THRID', '<'.$mail_mail_id.'>' );
+        $mail->addCustomHeader('Reply-To', '<' . $send_mail_to . '>');
+        $mail->addCustomHeader('References', '<' . $mail_mail_id . '>');
+        $mail->isHTML(true);                          // Set email format to HTML
+        $mail->Sender = $send_mail_from;
+        $mail->Subject = $send_mail_subject;
+        $mail->Body    = $send_mail_content;
+        $mail->setFrom($send_mail_from, '');
+
+        if(!$mail->send()) {
+            echo 'Reply could not be sent.';
+            $msg = 'Mailer Error: ' . $mail->ErrorInfo;
+            echo json_encode($msg);
+        } else {
+            $msg = 'Reply has been sent';
+            echo json_encode($msg);
+        }
+
+
+
+
+// ************************** solution 2
+
+
+         $body = [
+                  "Message" => [
+                    "sender" => [
+                      "emailAddress" => [
+                        "address" => $send_mail_from
+                      ]
+                    ],
+                    "toRecipients" =>[
+                            "emailAddress" =>[
+                            "address" => $send_mail_to
+                        ]
+                      ],
+                    "ccRecipients" => [],
+                    "attachments" => [],
+                    "body" => [
+                      "contentType" => "html",
+                      "content" => $send_mail_content
+                    ],
+                    "subject" => $send_mail_subject,
+                    "comment" => $send_mail_content 
+                  ]
+                ];
+
+        $Home = new Home();
+        $token =  $Home->microsoft_bearer_token();
+
+        $userClient = new Graph();
+        $userClient = $userClient->setAccessToken($token);
+
+        //$requestUrl = 'https://graph.microsoft.com/v1.0/users/messages/'.$mail_mail_id.'/microsoft.graph.createReply';
+	    $requestUrl = 'https://graph.microsoft.com/v1.0/users/mailFolders/'.$send_mail_from.'/messages/'.$mail_mail_id.'/reply';
+	    //$requestUrl = 'https://graph.microsoft.com/v1.0/users/messages/'.$mail_mail_id.'/reply';
+
+        $result = $userClient->createRequest('POST', $requestUrl);
+
+        $finalResult = $result->attachBody($body)->execute();
+
+
+// *************************** solution 3
+
+$graphServiceClient = new \GuzzleHttp\Client();
+
+$requestBody = new ReplyPostRequestBody();
+$message = new \Graph\Model\Message();
+$toRecipientsRecipient1 = new Recipient();
+$toRecipientsRecipient1EmailAddress = new EmailAddress();
+$toRecipientsRecipient1EmailAddress->setAddress($send_mail_to);
+
+$toRecipientsRecipient1EmailAddress->setName('Natasha Sharma');
+
+
+$toRecipientsRecipient1->setEmailAddress($toRecipientsRecipient1EmailAddress);
+
+$toRecipientsArray []= $toRecipientsRecipient1;
+$toRecipientsRecipient2 = new Recipient();
+$toRecipientsRecipient2EmailAddress = new EmailAddress();
+$toRecipientsRecipient2EmailAddress->setAddress($send_mail_from);
+
+$toRecipientsRecipient2EmailAddress->setName('sso ');
+
+
+$toRecipientsRecipient2->setEmailAddress($toRecipientsRecipient2EmailAddress);
+
+$toRecipientsArray []= $toRecipientsRecipient2;
+$message->setToRecipients($toRecipientsArray);
+
+
+
+$requestBody->setMessage($message);
+$requestBody->setComment($send_mail_content);
+
